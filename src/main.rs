@@ -1,16 +1,32 @@
 mod commands;
+mod utils;
 
 // ENV requirements
 use std::env;
 use dotenv::dotenv;
 
-// Serenity
-use serenity::async_trait;
-use serenity::model::channel::Message;
-use serenity::model::application::command::Command;
-use serenity::model::application::interaction::{Interaction, InteractionResponseType};
-use serenity::model::gateway::Ready;
-use serenity::prelude::*;
+use serenity::{
+    async_trait,
+    model::{
+        channel::Message,
+        application::{
+            command::Command,
+            interaction::{
+                Interaction,
+            }
+        },
+        gateway::Ready,
+        prelude::*,
+    },
+    client::{
+        Client,
+        EventHandler,
+        Context
+    }
+};
+use songbird::SerenityInit;
+use utils::interaction_message_response::interaction_message_response;
+
 
 struct Handler;
 
@@ -22,19 +38,10 @@ impl EventHandler for Handler {
                 "ping" => commands::info::ping::run(&command, &ctx, &command.data.options).await,
                 "info" => commands::info::info::run(&command, &ctx, &command.data.options).await,
                 "pong" => commands::info::pong::run(&command, &ctx, &command.data.options).await,
+                "join" => commands::music::join::run(&command, &ctx, &command.data.options).await,
                 _ => {
-                    async {
-                        if let Err(why) = command
-                            .create_interaction_response(&ctx.http, |response| {
-                            response
-                                .kind(InteractionResponseType::ChannelMessageWithSource)
-                                .interaction_response_data(|message| message.content("not implemented :(".to_string()))
-                        }).await
-                        {
-                            println!("Cannot respond to interaction: {}", why);
-                        };
-                    }.await;
-                "".to_string()
+                    interaction_message_response(&command, &ctx, "Command not implemented!").await;
+                    "".to_string()
                 },
             };
         }
@@ -42,9 +49,11 @@ impl EventHandler for Handler {
 
     async fn message(&self, ctx: Context, msg: Message) {
         let _ = match msg.content.as_str() {
-            "~ping" => commands::info::ping::message(ctx, msg).await,
-            "~info" => commands::info::info::message(ctx, msg).await,
-            "~pong" => commands::info::pong::message(ctx, msg).await,
+            "~ping"  => commands::info::ping::message(ctx, msg).await,
+            "~info"  => commands::info::info::message(ctx, msg).await,
+            "~pong"  => commands::info::pong::message(ctx, msg).await,
+            "~join"  => commands::music::join::message(ctx, msg).await,
+            "~leave" => commands::music::leave::message(ctx, msg).await,
             _ => ()
         };
     }
@@ -58,6 +67,7 @@ impl EventHandler for Handler {
                 .create_application_command(|command| commands::info::ping::register(command))
                 .create_application_command(|command| commands::info::info::register(command))
                 .create_application_command(|command| commands::info::pong::register(command))
+                .create_application_command(|command| commands::music::join::register(command))
        }).await;
 
        println!("Registered command!");
@@ -73,10 +83,12 @@ async fn main() {
 
     let intents = GatewayIntents::GUILD_MESSAGES
         | GatewayIntents::DIRECT_MESSAGES
-        | GatewayIntents::MESSAGE_CONTENT;
+        | GatewayIntents::MESSAGE_CONTENT
+        | GatewayIntents::non_privileged();
 
     let mut client = Client::builder(token, intents)
         .event_handler(Handler)
+        .register_songbird()
         .await
         .expect("Error creating client!");
 
