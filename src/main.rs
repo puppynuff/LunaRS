@@ -18,9 +18,10 @@ struct Handler;
 impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
-            println!("Received command interaction: {:#?}", command);
             let _result = match command.data.name.as_str() {
-                "ping" => commands::ping::run(&command, &ctx, &command.data.options).await,
+                "ping" => commands::info::ping::run(&command, &ctx, &command.data.options).await,
+                "info" => commands::info::info::run(&command, &ctx, &command.data.options).await,
+                "pong" => commands::info::pong::run(&command, &ctx, &command.data.options).await,
                 _ => {
                     async {
                         if let Err(why) = command
@@ -30,7 +31,7 @@ impl EventHandler for Handler {
                                 .interaction_response_data(|message| message.content("not implemented :(".to_string()))
                         }).await
                         {
-                        println!("Cannot respond to interaction: {}", why);
+                            println!("Cannot respond to interaction: {}", why);
                         };
                     }.await;
                 "".to_string()
@@ -41,7 +42,9 @@ impl EventHandler for Handler {
 
     async fn message(&self, ctx: Context, msg: Message) {
         let _ = match msg.content.as_str() {
-            "~ping" => commands::ping::message(ctx, msg).await,
+            "~ping" => commands::info::ping::message(ctx, msg).await,
+            "~info" => commands::info::info::message(ctx, msg).await,
+            "~pong" => commands::info::pong::message(ctx, msg).await,
             _ => ()
         };
     }
@@ -50,7 +53,12 @@ impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
 
-       let _commands =  Command::create_global_application_command(&ctx.http, |command| commands::ping::register(command)).await;
+       let _commands =  Command::set_global_application_commands(&ctx.http, |commands| {
+            commands
+                .create_application_command(|command| commands::info::ping::register(command))
+                .create_application_command(|command| commands::info::info::register(command))
+                .create_application_command(|command| commands::info::pong::register(command))
+       }).await;
 
        println!("Registered command!");
     }
