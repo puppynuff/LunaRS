@@ -36,7 +36,7 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
     command.name("join").description("joins the call!")
 }
 
-pub async fn message(ctx: Context, msg: Message) {
+pub async fn message(ctx: Context, msg: Message, _args: Vec<&str>) {
     if msg.content == "~join" {
         let guild = msg.guild(&ctx).expect("Failed to get guild!");
         let guild_id = guild.id;

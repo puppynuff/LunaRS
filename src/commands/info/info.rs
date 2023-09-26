@@ -37,7 +37,7 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
     command.name("info").description("Sends info on the discord bot")
 }
 
-pub async fn message(ctx: Context, msg: Message) {
+pub async fn message(ctx: Context, msg: Message, _args: Vec<&str>) {
     if msg.content == "~info" {
 
         if let Err(why) = msg.channel_id.send_message(&ctx.http, |message| {

@@ -16,7 +16,7 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
     command.name("ping").description("A ping command")
 }
 
-pub async fn message(ctx: Context, msg: Message) {
+pub async fn message(ctx: Context, msg: Message, _args: Vec<&str>) {
     if msg.content == "~ping" {
         if let Err(why) = msg.channel_id.say(&ctx.http, "Pong!").await {
             println!("Error sending message: {:?}", why);

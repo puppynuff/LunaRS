@@ -11,9 +11,7 @@ use serenity::{
         channel::Message,
         application::{
             command::Command,
-            interaction::{
-                Interaction,
-            }
+            interaction::Interaction,
         },
         gateway::Ready,
         prelude::*,
@@ -35,10 +33,12 @@ impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
             let _result = match command.data.name.as_str() {
-                "ping" => commands::info::ping::run(&command, &ctx, &command.data.options).await,
-                "info" => commands::info::info::run(&command, &ctx, &command.data.options).await,
-                "pong" => commands::info::pong::run(&command, &ctx, &command.data.options).await,
-                "join" => commands::music::join::run(&command, &ctx, &command.data.options).await,
+                "ping"  => commands::info::ping::run(&command, &ctx, &command.data.options).await,
+                "info"  => commands::info::info::run(&command, &ctx, &command.data.options).await,
+                "pong"  => commands::info::pong::run(&command, &ctx, &command.data.options).await,
+                "join"  => commands::music::join::run(&command, &ctx, &command.data.options).await,
+                "leave" => commands::music::leave::run(&command, &ctx, &command.data.options).await,
+                "play" => commands::music::play::run(&command, &ctx, &command.data.options).await,
                 _ => {
                     interaction_message_response(&command, &ctx, "Command not implemented!").await;
                     "".to_string()
@@ -48,12 +48,16 @@ impl EventHandler for Handler {
     }
 
     async fn message(&self, ctx: Context, msg: Message) {
-        let _ = match msg.content.as_str() {
-            "~ping"  => commands::info::ping::message(ctx, msg).await,
-            "~info"  => commands::info::info::message(ctx, msg).await,
-            "~pong"  => commands::info::pong::message(ctx, msg).await,
-            "~join"  => commands::music::join::message(ctx, msg).await,
-            "~leave" => commands::music::leave::message(ctx, msg).await,
+        let string_data = msg.content.clone();
+        let split_args = string_data.split(" ");
+        let args = split_args.collect::<Vec<&str>>();
+        let _ = match args[0] {
+            "~ping"  => commands::info::ping::message(ctx, msg, args).await,
+            "~info"  => commands::info::info::message(ctx, msg, args).await,
+            "~pong"  => commands::info::pong::message(ctx, msg, args).await,
+            "~join"  => commands::music::join::message(ctx, msg, args).await,
+            "~leave" => commands::music::leave::message(ctx, msg, args).await,
+            "~play"  => commands::music::play::message(ctx, msg, args).await,
             _ => ()
         };
     }
@@ -68,9 +72,10 @@ impl EventHandler for Handler {
                 .create_application_command(|command| commands::info::info::register(command))
                 .create_application_command(|command| commands::info::pong::register(command))
                 .create_application_command(|command| commands::music::join::register(command))
+                .create_application_command(|command| commands::music::leave::register(command))
+                .create_application_command(|command| commands::music::play::register(command))
        }).await;
 
-       println!("Registered command!");
     }
 
 }
