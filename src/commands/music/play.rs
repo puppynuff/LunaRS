@@ -1,7 +1,12 @@
-use serenity::{model::{application::interaction::application_command::ApplicationCommandInteraction, prelude::{application_command::{CommandDataOption, CommandDataOptionValue}, command::CommandOptionType}}, prelude::Context, builder::CreateApplicationCommand};
+use serenity::model::application::interaction::application_command::ApplicationCommandInteraction;
+use serenity::prelude::Context;
+use serenity::model::application::interaction::application_command::CommandDataOptionValue;
+use serenity::model::application::interaction::application_command::CommandDataOption;
+use serenity::builder::CreateApplicationCommand;
+use serenity::model::application::command::CommandOptionType;
 use serenity::model::channel::Message;
 
-use crate::utils::{interaction_message_response::interaction_message_response, check_msg};
+use crate::utils::{interaction_message_response::interaction_message_response, check_msg::{self, check_msg}};
 pub async fn run(command: &ApplicationCommandInteraction, ctx: &Context, options: &[CommandDataOption]) -> String {
     let string = options.get(0)
         .expect("Expected string option")
@@ -50,7 +55,7 @@ pub async fn run(command: &ApplicationCommandInteraction, ctx: &Context, options
                                             ("Title: ", format!("{:?}", source.metadata.title.clone().expect("Failed to get title!")), false),
                                             ("Duration: ", format!("{:?}", source.metadata.duration.clone().expect("Failed to get duration")), false),
                                             ("Artist:", format!("{:?}", source.metadata.channel.clone().expect("Failed to get author!")), false)
-                                        ])
+                                    ])
                                 })
                         })
                 }).await {
@@ -86,7 +91,52 @@ pub async fn message(ctx: Context, msg: Message, args: Vec<&str>) {
         return ();
     }
 
-     check_msg::check_msg(msg.reply(&ctx ,format!("{:?}", args[1]).as_str()).await);
+    let url = args[1];
+
+    if !url.starts_with("http") {
+        check_msg(msg.reply(&ctx, "URL needs to be http:// or https://").await);
+
+        return ();
+    }
+
+    let guild = msg.guild(&ctx.cache).clone().expect("Guild not found!");
+    let guild_id = guild.id;
+
+    let manager = songbird::get(&ctx).await
+        .expect("Songbird Voice client placed in at initialization.").clone();
+
+    if let Some(handler_lock) = manager.get(guild_id) {
+        let mut handler = handler_lock.lock().await;
+
+        let source = match songbird::ytdl(&url).await {
+            Ok(source) => source,
+            Err(why) => {
+                println!("Err starting source: {:?}", why);
+
+                check_msg(msg.reply(&ctx, "Error sourcing FFMPEG").await);
+
+                return ();
+            }
+        };
+
+        check_msg(msg.channel_id.send_message(&ctx, |message| {
+            message.content(format!("Added {:?} to queue~", source.metadata.title.clone().expect("Error getting title!")))
+                .embed(|embed| {
+                    embed.title("Queued song!")
+                        .description(format!("Position: {:?}", handler.queue().len()))
+                        .thumbnail(source.metadata.thumbnail.clone().expect("failed to get thumbnail!"))
+                        .fields(vec![
+                            ("Title: ", format!("{:?}", source.metadata.title.clone().expect("Failed to get title!")), false),
+                            ("Duration: ", format!("{:?}", source.metadata.duration.clone().expect("Failed to get song duration!")), false),
+                            ("Artist: ", format!("{:?}", source.metadata.channel.clone().expect("Failed to get author!")), false)
+                        ])
+                })
+        }).await);
+
+        handler.enqueue_source(source.into());
+    } else {
+        check_msg(msg.reply(&ctx, "Not in a voice channel to play songs in~").await);
+    }
 
     ()
 }
