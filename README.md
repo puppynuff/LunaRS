@@ -3,8 +3,21 @@
 
 ### Planned to have the same commands as old bots, and maybe new ones.
 
-### Working out why it doesn't make application commands.
-Currently just does ping.
+--------------------------------------------------------------------------------------------------
+
+## Current commands
+
+| command name | functionality                      | interaction command | message command |
+| ------------ | ---------------------------------- | ------------------- | --------------- |
+| info         | sends info embed to user           | yes                 | yes             |
+| ping         | replies ping to command            | yes                 | yes             |
+| pong         | replies pong to command            | yes                 | yes             |
+| join         | Joins users voice channel          | yes                 | yes             |
+| leave        | Leaves users voice channel         | yes                 | yes             |
+| play         | Plays music in users voice channel | yes                 | yes             |
+
+--------------------------------------------------------------------------------------------------
+
 
 ### Current Change map from each bot
 PuppyClanBot -> First bot, all in one file.                                           |  Discord.js
